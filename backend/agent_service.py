@@ -55,6 +55,7 @@ def _build_request_headers() -> dict[str, str]:
     """
     Build the headers required by every TinyFish request.
     The API key is read from settings (which reads from .env).
+    Format based on the official TinyFish API documentation.
     """
     return {
         "X-API-Key": settings.TINYFISH_API_KEY,
@@ -81,6 +82,100 @@ def _build_request_body(url: str, goal: str) -> dict[str, str]:
 
 
 # ======================================================================
+# Demo mode: simulate task execution without TinyFish API
+# ======================================================================
+
+async def _execute_task_demo(
+    task: Task,
+    db: AsyncSession,
+) -> AsyncGenerator[SSEEvent, None]:
+    """
+    Mock task execution for testing without TinyFish API.
+    Simulates realistic progress events with delays.
+    """
+    start_time = datetime.now(timezone.utc)
+    
+    task.status = TaskStatus.RUNNING
+    task.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    logger.info("DEMO MODE - Task %s → RUNNING", task.id)
+    
+    yield SSEEvent(
+        event="STARTED",
+        task_id=task.id,
+        message=f"DEMO MODE: Agent started. Opening {task.target_url}",
+    )
+    
+    await _save_log(
+        db=db,
+        task_id=task.id,
+        event_type="STARTED",
+        message=f"DEMO MODE: Task started. URL: {task.target_url}",
+        level=LogLevel.INFO,
+    )
+    
+    # Simulate some progress steps
+    demo_steps = [
+        ("Page loaded", {"url": task.target_url}),
+        ("Searching content", {"query": task.goal[:30]}),
+        ("Found target element", {"found": True}),
+        ("Extracting data", {"extracted": True}),
+    ]
+    
+    for i, (msg, data) in enumerate(demo_steps):
+        await asyncio.sleep(1)  # Realistic delay
+        
+        yield SSEEvent(
+            event="PROGRESS",
+            task_id=task.id,
+            message=f"DEMO: {msg}",
+            data=data,
+        )
+        
+        await _save_log(
+            db=db,
+            task_id=task.id,
+            event_type="PROGRESS",
+            message=f"DEMO: {msg}",
+            level=LogLevel.INFO,
+        )
+    
+    # Mark complete
+    task.status = TaskStatus.COMPLETED
+    task.completed_at = datetime.now(timezone.utc)
+    task.duration_seconds = int((task.completed_at - start_time).total_seconds())
+    await db.commit()
+    
+    result = TaskResult(
+        task_id=task.id,
+        status="SUCCESS",
+        data={
+            "demo": True,
+            "message": "This is a demo response - no real browser automation occurred",
+            "original_goal": task.goal,
+        },
+        error=None,
+    )
+    db.add(result)
+    await db.commit()
+    
+    yield SSEEvent(
+        event="COMPLETE",
+        task_id=task.id,
+        message="DEMO task completed successfully",
+        data=result.data,
+    )
+    
+    await _save_log(
+        db=db,
+        task_id=task.id,
+        event_type="COMPLETED",
+        message="DEMO: Task completed",
+        level=LogLevel.INFO,
+    )
+
+
+# ======================================================================
 # Core execution: run a task and yield SSE events
 # ======================================================================
 
@@ -104,6 +199,13 @@ async def execute_task_stream(
     Yields:
         SSEEvent objects (STARTED, PROGRESS, COMPLETE, ERROR).
     """
+    # Use demo mode if enabled (for testing without TinyFish API)
+    if settings.DEMO_MODE:
+        logger.info("DEMO MODE ENABLED - simulating task execution")
+        async for event in _execute_task_demo(task, db):
+            yield event
+        return
+    
     start_time = datetime.now(timezone.utc)
 
     # ---- Mark task as RUNNING ----------------------------------------
@@ -144,7 +246,6 @@ async def execute_task_stream(
                 # Iterate over each SSE event from TinyFish
                 async for sse in event_source.aiter_sse():
                     # Each event has: sse.event, sse.data, sse.id, sse.retry
-                    raw_event_type = (sse.event or "PROGRESS").upper()
                     raw_data_str   = sse.data or ""
 
                     # Try to parse the data as JSON
@@ -154,11 +255,17 @@ async def execute_task_stream(
                     if raw_data_str:
                         try:
                             parsed_data = json.loads(raw_data_str)
+                            # TinyFish sends event type inside JSON under "type" field
+                            # e.g., {"type":"COMPLETE","runId":"...","resultJson":{...}}
+                            raw_event_type = (parsed_data.get("type") or sse.event or "PROGRESS").upper()
                             # TinyFish sometimes nests the message under "message"
                             message = parsed_data.get("message", raw_data_str)
                         except json.JSONDecodeError:
                             # Not JSON — treat as plain text progress message
+                            raw_event_type = (sse.event or "PROGRESS").upper()
                             message = raw_data_str
+                    else:
+                        raw_event_type = (sse.event or "PROGRESS").upper()
 
                     logger.debug("TinyFish SSE [%s]: %s", raw_event_type, message)
 
@@ -210,7 +317,11 @@ async def execute_task_stream(
 
     except httpx.HTTPStatusError as exc:
         # TinyFish returned 4xx / 5xx
-        error_msg = f"TinyFish API error {exc.response.status_code}: {exc.response.text}"
+        try:
+            response_text = exc.response.text
+        except (httpx.ResponseNotRead, RuntimeError):
+            response_text = "(unable to read response body)"
+        error_msg = f"TinyFish API error {exc.response.status_code}: {response_text}"
         logger.error(error_msg)
         await _handle_failure(task, db, error_msg, start_time)
         yield SSEEvent(event="ERROR", task_id=task.id, message=error_msg)
@@ -278,8 +389,9 @@ async def _handle_completion(
     task.duration_seconds = duration
 
     # Build the TaskResult row from the COMPLETE event's data
+    # TinyFish sends result under "resultJson" field
     result_data       = parsed_data or {}
-    extracted_data    = result_data.get("data") or result_data.get("result")
+    extracted_data    = result_data.get("resultJson") or result_data.get("data") or result_data.get("result")
     raw_text          = result_data.get("message") or result_data.get("summary") or str(result_data)
     screenshot_url    = result_data.get("screenshot") or result_data.get("screenshot_url")
 

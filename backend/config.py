@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # How many seconds to wait for TinyFish to respond before giving up
     TINYFISH_TIMEOUT: int = 300  # 5 minutes — browser tasks can take a while
 
+    # Demo mode: simulate task execution without a real API key (for testing)
+    DEMO_MODE: bool = False
+
     # ------------------------------------------------------------------
     # Database
     # ------------------------------------------------------------------
