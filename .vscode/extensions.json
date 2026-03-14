@@ -1,0 +1,23 @@
+{
+  "recommendations": [
+    // Python development
+    "ms-python.python",               // Python language support
+    "ms-python.vscode-pylance",       // Type checking, IntelliSense
+    "ms-python.debugpy",              // Python debugger
+
+    // JavaScript / React
+    "dbaeumer.vscode-eslint",         // ESLint for JS code quality
+    "esbenp.prettier-vscode",         // Code formatter
+
+    // Docker
+    "ms-azuretools.vscode-docker",    // Docker file support
+
+    // Database
+    "mtxr.sqltools",                  // SQL queries in VS Code
+    "qwtel.sqlite-viewer",            // View SQLite .db files visually
+
+    // General
+    "christian-kohler.path-intellisense",  // File path autocomplete
+    "streetsidesoftware.code-spell-checker" // Catch typos in comments
+  ]
+}

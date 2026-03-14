@@ -1,0 +1,96 @@
+/*
+ * index.css — Global Styles
+ * ==========================
+ * Base styles applied to every page in the app.
+ * We use CSS custom properties (variables) for the colour palette
+ * so it's easy to retheme by changing a few values at the top.
+ *
+ * Design system:
+ *   - Dark navy background (#0f172a)
+ *   - Accent blue (#3b82f6)
+ *   - Card surface: slightly lighter than background
+ *   - Monospace font for logs / code output
+ */
+
+/* ---- CSS Custom Properties (variables) ---- */
+:root {
+  --bg-primary:   #0f172a;   /* page background */
+  --bg-card:      #1e293b;   /* card / panel background */
+  --bg-input:     #0f172a;   /* form input background */
+  --border:       #334155;   /* subtle border colour */
+  --accent:       #3b82f6;   /* primary blue accent */
+  --accent-hover: #2563eb;   /* darker blue on hover */
+  --success:      #22c55e;   /* green — COMPLETED */
+  --warning:      #f59e0b;   /* amber — RUNNING */
+  --error:        #ef4444;   /* red — FAILED */
+  --text-primary: #f1f5f9;   /* main text */
+  --text-muted:   #94a3b8;   /* secondary / label text */
+  --font-mono:    'Courier New', Courier, monospace;
+}
+
+/* ---- Reset & base ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  /* System font stack — loads instantly, no web-font request needed */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Oxygen, Ubuntu, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ---- Links ---- */
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---- Scrollbar (Webkit) ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ---- Status badge colours ---- */
+.status-pending   { color: var(--text-muted); }
+.status-running   { color: var(--warning); }
+.status-completed { color: var(--success); }
+.status-failed    { color: var(--error); }
+
+/* ---- Utility: visually hidden (for a11y) ---- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}

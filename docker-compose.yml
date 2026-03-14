@@ -1,0 +1,110 @@
+# docker-compose.yml — WebPilot AI Full Stack
+# =============================================
+# Starts all services with one command:
+#   docker compose up --build
+#
+# Services:
+#   backend  — FastAPI Python app  (http://localhost:8000)
+#   frontend — React app via nginx  (http://localhost:3000)
+#   db       — PostgreSQL database  (localhost:5432)
+#
+# Prerequisites: Docker Desktop installed and running
+# Windows: Docker Desktop for Windows (WSL2 backend recommended)
+
+version: "3.9"
+
+services:
+
+  # ================================================================
+  # PostgreSQL Database
+  # ================================================================
+  db:
+    image: postgres:16-alpine          # lightweight official Postgres image
+    container_name: webpilot_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: webpilot          # database username
+      POSTGRES_PASSWORD: webpilot123  # ⚠ Change in production
+      POSTGRES_DB: webpilot           # database name
+    volumes:
+      # Persist database data across container restarts
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"                   # expose so you can use pgAdmin locally
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U webpilot -d webpilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - webpilot_net
+
+  # ================================================================
+  # FastAPI Backend
+  # ================================================================
+  backend:
+    build:
+      context: ./backend              # build from ./backend/Dockerfile
+      dockerfile: Dockerfile
+    container_name: webpilot_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy    # wait for Postgres to be ready
+    environment:
+      # Override DATABASE_URL to use Postgres instead of SQLite inside Docker
+      DATABASE_URL: postgresql+asyncpg://webpilot:webpilot123@db:5432/webpilot
+      # Read your TinyFish API key from the host .env file
+      TINYFISH_API_KEY: ${TINYFISH_API_KEY}
+      TINYFISH_BASE_URL: ${TINYFISH_BASE_URL:-https://agent.tinyfish.ai/v1/automation/run-sse}
+      TINYFISH_TIMEOUT: ${TINYFISH_TIMEOUT:-300}
+      HOST: 0.0.0.0
+      PORT: 8000
+      DEBUG: "false"
+      # Allow requests from the nginx container serving the React frontend
+      CORS_ORIGINS: '["http://localhost:3000","http://frontend:80"]'
+    ports:
+      - "8000:8000"                   # Swagger UI at http://localhost:8000/docs
+    volumes:
+      # Mount the source code for hot-reload during development
+      # Remove this volume mount for a clean production build
+      - ./backend:/app
+    networks:
+      - webpilot_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ================================================================
+  # React Frontend (served by nginx in production)
+  # ================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: webpilot_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # Tell React where the backend is
+      REACT_APP_API_URL: http://localhost:8000
+    ports:
+      - "3000:80"                     # React app at http://localhost:3000
+    networks:
+      - webpilot_net
+
+# ================================================================
+# Named Volumes
+# ================================================================
+volumes:
+  postgres_data:                      # persists Postgres data between docker compose down/up
+
+# ================================================================
+# Networks
+# ================================================================
+networks:
+  webpilot_net:
+    driver: bridge                    # default Docker bridge network

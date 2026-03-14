@@ -1,0 +1,36 @@
+{
+  // Version of the launch config format
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // ── Run the FastAPI backend with auto-reload ──────────────────
+      "name": "Backend: FastAPI (dev)",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "main:app",
+        "--reload",          // auto-restart when you save a .py file
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--log-level", "debug"
+      ],
+      "cwd": "${workspaceFolder}/webpilot-agent/backend",
+      // Load .env from the project root automatically
+      "envFile": "${workspaceFolder}/webpilot-agent/.env",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      // ── Debug the CLI example script ─────────────────────────────
+      "name": "Script: run_agent_example.py",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/webpilot-agent/scripts/run_agent_example.py",
+      "args": ["--example", "price"],
+      "cwd": "${workspaceFolder}/webpilot-agent",
+      "envFile": "${workspaceFolder}/webpilot-agent/.env",
+      "console": "integratedTerminal"
+    }
+  ]
+}

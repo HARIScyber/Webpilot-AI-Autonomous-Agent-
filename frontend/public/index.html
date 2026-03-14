@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      viewport meta tag: makes the layout responsive on mobile.
+      width=device-width → use the device's actual width
+      initial-scale=1   → don't zoom in/out by default
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta
+      name="description"
+      content="WebPilot AI — Autonomous web agent powered by TinyFish"
+    />
+
+    <!--
+      Favicon — browser tab icon.
+      The %PUBLIC_URL% placeholder is replaced by React's build tool
+      with the actual public folder path.
+    -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+
+    <title>WebPilot AI | Autonomous Web Agent</title>
+  </head>
+  <body>
+    <!--
+      noscript fallback: shown only if JavaScript is disabled.
+      Our React app requires JS, so this is a friendly notice.
+    -->
+    <noscript>You need to enable JavaScript to run WebPilot AI.</noscript>
+
+    <!--
+      root div: React mounts the entire application here.
+      React's ReactDOM.createRoot() targets this element in src/index.js.
+    -->
+    <div id="root"></div>
+  </body>
+</html>

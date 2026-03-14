@@ -1,0 +1,53 @@
+# .gitignore — WebPilot AI
+# ========================
+# Files that should NEVER be committed to version control.
+
+# ---- Secrets (CRITICAL — keep API keys safe) ----
+.env
+*.env
+.env.local
+.env.production
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+*.so
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# ---- SQLite database files ----
+*.db
+*.sqlite
+*.sqlite3
+
+# ---- Node.js / React ----
+node_modules/
+frontend/build/
+npm-debug.log*
+yarn-error.log
+
+# ---- VS Code ----
+.vscode/settings.json
+# Keep launch.json in version control — it's useful for teammates
+# .vscode/launch.json
+
+# ---- OS files ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Docker ----
+# Don't ignore docker-compose.yml — it's part of the project setup
+# But DO ignore any overrides with real passwords
+docker-compose.override.yml
